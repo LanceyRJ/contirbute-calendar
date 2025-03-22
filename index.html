@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Contribution Calendar</title>
+    <style>
+        :root {
+            --color-unselected: #ffffff;
+            --color-selected: #40c463;
+            --color-border: #e1e4e8;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #24292e;
+            background-color: white;
+        }
+
+        h1 {
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .current-date-display {
+            font-size: 14px;
+            color: #586069;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .year-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        select {
+            padding: 6px 12px;
+            font-size: 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .calendar-container {
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 6px;
+            padding: 16px;
+            border: 1px solid var(--color-border);
+        }
+
+        .calendar-graph {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .months {
+            display: flex;
+            padding-left: 50px;
+        }
+
+        .month {
+            width: 55px;
+            text-align: center;
+            font-size: 12px;
+            color: #586069;
+        }
+
+        .days-labels {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 106px;
+            padding-top: 24px;
+            font-size: 12px;
+            color: #586069;
+        }
+
+        .day-label {
+            height: 15px;
+            text-align: right;
+            padding-right: 5px;
+        }
+
+        .day-label:nth-child(even) {
+            visibility: hidden;
+        }
+
+        .calendar-slider {
+            overflow-x: auto;
+            margin-top: 10px;
+            padding-bottom: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .weeks {
+            display: flex;
+            margin-left: 50px;
+            min-width: max-content;
+        }
+
+        .week {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .day {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background-color: var(--color-unselected);
+            border: 1px solid var(--color-border);
+            cursor: pointer;
+            margin: 2px;
+            transition: background-color 0.2s ease;
+        }
+
+        .day.selected {
+            background-color: var(--color-selected);
+        }
+
+        .day.today {
+            border: 2px solid #0366d6;
+            margin: 1px;
+        }
+
+        .activity-info {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background-color: white;
+        }
+
+        .selected-dates {
+            font-family: monospace;
+            white-space: pre-wrap;
+            padding: 10px;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            overflow-y: auto;
+            max-height: 200px;
+            border: 1px solid var(--color-border);
+        }
+
+        .controls {
+            margin-top: 16px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 20px;
+            color: #24292e;
+            background-color: #fafbfc;
+            border: 1px solid rgba(27, 31, 35, 0.15);
+            border-radius: 6px;
+            box-shadow: 0 1px 0 rgba(27, 31, 35, 0.1);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .button.primary {
+            color: #fff;
+            background-color: #2ea44f;
+        }
+
+        .button:hover {
+            background-color: #f3f4f6;
+        }
+
+        .button.primary:hover {
+            background-color: #2c974b;
+        }
+    </style>
+</head>
+<body>
+    <h1>GitHub Contribution Calendar Clone</h1>
+    <div class="current-date-display" id="current-date-display"></div>
+    
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <div class="year-selector">
+                <label for="year-select">Year:</label>
+                <select id="year-select"></select>
+            </div>
+        </div>
+
+        <div class="js-calendar-graph contribution-calendar-graph">
+            <div class="months"></div>
+            <div class="days-labels">
+                <div class="day-label">Mon</div>
+                <div class="day-label">Wed</div>
+                <div class="day-label">Fri</div>
+            </div>
+            <div class="calendar-slider">
+                <div class="weeks"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="button" id="clear-selection">Clear Selection</button>
+            <button class="button primary" id="copy-dates">Copy Selected Dates</button>
+        </div>
+    </div>
+
+    <div class="activity-info">
+        <h3>Selected Dates:</h3>
+        <div class="selected-dates" id="selected-dates">No dates selected</div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedDates = [];
+        let calendarData = [];
+        
+        // Get current date
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+        
+        // Available years (2020 to current year)
+        const startYear = 2020;
+        const endYear = currentYear;
+        let selectedYear = currentYear; // Default to current year
+        
+        // Update current date display
+        function updateCurrentDateDisplay() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            document.getElementById('current-date-display').textContent = 
+                `Current Date: ${now.toLocaleDateString('en-US', options)}`;
+        }
+        
+        // Update date display every second
+        function startClock() {
+            updateCurrentDateDisplay();
+            setInterval(updateCurrentDateDisplay, 1000);
+        }
+        
+        // Populate year dropdown
+        function populateYearDropdown() {
+            const yearSelect = document.getElementById('year-select');
+            
+            for (let year = startYear; year <= endYear; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            }
+            
+            // Set default year to current year
+            yearSelect.value = selectedYear;
+            
+            // Add change event listener
+            yearSelect.addEventListener('change', function() {
+                selectedYear = parseInt(this.value);
+                resetCalendar();
+                renderCalendar();
+            });
+        }
+        
+        // Reset calendar
+        function resetCalendar() {
+            // Clear months
+            document.querySelector('.months').innerHTML = '';
+            
+            // Clear weeks
+            document.querySelector('.weeks').innerHTML = '';
+            
+            // Clear selected dates display remains unchanged
+            // We want to keep selected dates even when changing years
+        }
+        
+        // Function to generate calendar data for a specific year
+        function generateCalendarData(year) {
+            const startDate = new Date(year, 0, 1); // Jan 1 of selected year
+            
+            // If selected year is current year, end at today, otherwise end at Dec 31
+            const endDate = new Date();
+            if (year < currentYear) {
+                endDate.setFullYear(year, 11, 31); // Dec 31 of selected year
+            } // else it remains today (for current year)
+            
+            // Calculate the number of weeks
+            const daysDiff = Math.floor((endDate - startDate) / (24 * 60 * 60 * 1000));
+            const totalWeeks = Math.ceil((daysDiff + getWeekday(startDate)) / 7);
+            
+            const calendarData = [];
+            
+            for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+                const week = [];
+                
+                for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+                    const dayOffset = weekIndex * 7 + dayIndex - getWeekday(startDate);
+                    const currentDate = new Date(startDate);
+                    currentDate.setDate(startDate.getDate() + dayOffset);
+                    
+                    if (currentDate < startDate || currentDate > endDate) {
+                        week.push(null);
+                    } else {
+                        // Check if this date is already selected
+                        const isSelected = selectedDates.some(
+                            date => date.getFullYear() === currentDate.getFullYear() && 
+                                  date.getMonth() === currentDate.getMonth() && 
+                                  date.getDate() === currentDate.getDate()
+                        );
+                        
+                        // Check if this date is today
+                        const isToday = currentDate.getFullYear() === today.getFullYear() &&
+                                      currentDate.getMonth() === today.getMonth() &&
+                                      currentDate.getDate() === today.getDate();
+                        
+                        week.push({
+                            date: new Date(currentDate),
+                            selected: isSelected,
+                            isToday: isToday
+                        });
+                    }
+                }
+                
+                calendarData.push(week);
+            }
+            
+            return calendarData;
+        }
+        
+        // Helper function to get weekday (0 = Sunday, 6 = Saturday)
+        function getWeekday(date) {
+            return date.getDay();
+        }
+        
+        // Format date as YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `'${year}-${month}-${day}'`;
+        }
+        
+        // Function to render months for the current year
+        function renderMonths() {
+            const monthsContainer = document.querySelector('.months');
+            const startDate = new Date(selectedYear, 0, 1);
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            // Determine end month
+            const endMonth = (selectedYear < currentYear) ? 11 : currentMonth;
+            
+            for (let month = 0; month <= endMonth; month++) {
+                const monthElement = document.createElement('div');
+                monthElement.className = 'month';
+                monthElement.textContent = monthNames[month];
+                monthsContainer.appendChild(monthElement);
+            }
+        }
+        
+        // Function to update selected dates display
+        function updateSelectedDates(dates) {
+            const selectedDatesElement = document.getElementById('selected-dates');
+            selectedDates = dates;
+            
+            if (selectedDates.length === 0) {
+                selectedDatesElement.textContent = 'No dates selected';
+                return;
+            }
+            
+            // Sort dates chronologically
+            selectedDates.sort((a, b) => a - b);
+            
+            // Format dates as requested
+            const formattedDates = selectedDates.map(date => formatDate(date));
+            selectedDatesElement.textContent = formattedDates.join(',\n');
+        }
+        
+        // Function to render calendar
+        function renderCalendar() {
+            const weeksContainer = document.querySelector('.weeks');
+            calendarData = generateCalendarData(selectedYear);
+            
+            calendarData.forEach(week => {
+                const weekElement = document.createElement('div');
+                weekElement.className = 'week';
+                
+                week.forEach(day => {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'day';
+                    
+                    if (day) {
+                        dayElement.dataset.date = day.date.toISOString();
+                        
+                        // Apply selected class if date is selected
+                        if (day.selected) {
+                            dayElement.classList.add('selected');
+                        }
+                        
+                        // Highlight today
+                        if (day.isToday) {
+                            dayElement.classList.add('today');
+                        }
+                        
+                        dayElement.addEventListener('click', function() {
+                            // Toggle selection
+                            day.selected = !day.selected;
+                            this.classList.toggle('selected');
+                            
+                            if (day.selected) {
+                                if (!selectedDates.some(d => {
+                                    return d.getFullYear() === day.date.getFullYear() && 
+                                           d.getMonth() === day.date.getMonth() && 
+                                           d.getDate() === day.date.getDate();
+                                })) {
+                                    selectedDates.push(day.date);
+                                }
+                            } else {
+                                const index = selectedDates.findIndex(d => {
+                                    return d.getFullYear() === day.date.getFullYear() && 
+                                           d.getMonth() === day.date.getMonth() && 
+                                           d.getDate() === day.date.getDate();
+                                });
+                                if (index !== -1) {
+                                    selectedDates.splice(index, 1);
+                                }
+                            }
+                            
+                            updateSelectedDates(selectedDates);
+                        });
+                    } else {
+                        dayElement.style.visibility = 'hidden';
+                    }
+                    
+                    weekElement.appendChild(dayElement);
+                });
+                
+                weeksContainer.appendChild(weekElement);
+            });
+        }
+        
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Clear old event listeners
+            const clearButton = document.getElementById('clear-selection');
+            const copyButton = document.getElementById('copy-dates');
+            
+            const newClearButton = clearButton.cloneNode(true);
+            const newCopyButton = copyButton.cloneNode(true);
+            
+            clearButton.parentNode.replaceChild(newClearButton, clearButton);
+            copyButton.parentNode.replaceChild(newCopyButton, copyButton);
+            
+            // Add clear selection button functionality
+            newClearButton.addEventListener('click', function() {
+                const selectedElements = document.querySelectorAll('.day.selected');
+                selectedElements.forEach(el => el.classList.remove('selected'));
+                
+                // Clear all selections in data
+                calendarData.forEach(week => {
+                    week.forEach(day => {
+                        if (day) {
+                            day.selected = false;
+                        }
+                    });
+                });
+                
+                updateSelectedDates([]);
+            });
+            
+            // Add copy functionality
+            newCopyButton.addEventListener('click', function() {
+                if (selectedDates.length === 0) {
+                    alert('No dates selected to copy');
+                    return;
+                }
+                
+                const formattedDates = selectedDates
+                    .sort((a, b) => a - b)
+                    .map(date => formatDate(date))
+                    .join(',\n');
+                
+                navigator.clipboard.writeText(formattedDates)
+                    .then(() => {
+                        alert('Selected dates copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Could not copy text: ', err);
+                        alert('Failed to copy to clipboard. Please copy manually.');
+                    });
+            });
+        }
+        
+        // Auto-scroll to current month if viewing current year
+        function scrollToCurrentMonth() {
+            if (selectedYear === currentYear) {
+                const monthWidth = 55; // Width of each month in pixels
+                const scrollPosition = currentMonth * monthWidth;
+                document.querySelector('.calendar-slider').scrollLeft = scrollPosition;
+            }
+        }
+        
+        // Initialize the application
+        function initialize() {
+            startClock();
+            populateYearDropdown();
+            renderMonths();
+            renderCalendar();
+            initializeEventListeners();
+            scrollToCurrentMonth();
+        }
+        
+        // Start the application
+        initialize();
+    </script>
+</body>
+</html>
