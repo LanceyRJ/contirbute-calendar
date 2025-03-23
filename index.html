@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Contribution Calendar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --color-unselected: #ffffff;
-            --color-selected: #40c463;
+            --color-unselected: #ebedf0;
+            --color-selected: #39d353;
             --color-border: #e1e4e8;
+            --color-bg: #ffffff;
+            --color-text: #24292e;
+            --color-text-muted: #586069;
         }
 
         body {
@@ -16,8 +20,8 @@
             max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
-            color: #24292e;
-            background-color: white;
+            color: var(--color-text);
+            background-color: var(--color-bg);
         }
 
         h1 {
@@ -55,10 +59,11 @@
 
         .calendar-container {
             margin-top: 20px;
-            background-color: white;
+            background-color: #ffffff;
             border-radius: 6px;
-            padding: 16px;
+            padding: 20px;
             border: 1px solid var(--color-border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .calendar-graph {
@@ -68,66 +73,84 @@
         }
 
         .months {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(12, minmax(70px, 1fr));
             padding-left: 50px;
+            gap: 2px;
+            margin-bottom: 8px;
         }
 
         .month {
-            width: 55px;
+            padding: 4px;
             text-align: center;
             font-size: 12px;
-            color: #586069;
+            color: var(--color-text-muted);
+            background-color: var(--color-bg);
+            border-radius: 3px;
+            min-width: 30px;
+            margin: 0 1px;
         }
 
         .days-labels {
             position: absolute;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            height: 106px;
+            justify-content: space-around;
+            height: 140px;  /* Increased to match new day size */
             padding-top: 24px;
             font-size: 12px;
-            color: #586069;
+            color: var(--color-text-muted);
+            width: 45px;
         }
 
         .day-label {
             height: 15px;
             text-align: right;
-            padding-right: 5px;
+            padding-right: 8px;
+            line-height: 15px;
         }
 
         .day-label:nth-child(even) {
-            visibility: hidden;
+            visibility: visible;
         }
 
         .calendar-slider {
             overflow-x: auto;
-            margin-top: 10px;
+            margin-top: 15px;
             padding-bottom: 16px;
             -webkit-overflow-scrolling: touch;
+            background-color: var(--color-bg);
+            border-radius: 6px;
+            padding: 16px;
         }
 
         .weeks {
             display: flex;
             margin-left: 50px;
             min-width: max-content;
+            gap: 2px;
         }
 
         .week {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 2px;
         }
 
         .day {
-            width: 10px;
-            height: 10px;
+            width: 15px;
+            height: 15px;
             border-radius: 2px;
             background-color: var(--color-unselected);
-            border: 1px solid var(--color-border);
+            border: none;
             cursor: pointer;
-            margin: 2px;
-            transition: background-color 0.2s ease;
+            margin: 0;
+            transition: all 0.2s ease;
+        }
+
+        .day:hover {
+            transform: scale(1.1);
+            border: none;
         }
 
         .day.selected {
@@ -135,22 +158,49 @@
         }
 
         .day.today {
-            border: 2px solid #0366d6;
-            margin: 1px;
+            border: 1px solid #0366d6;
+            margin: 0;
         }
 
         .activity-info {
             margin-top: 20px;
-            padding: 10px;
+            padding: 20px;
             border: 1px solid var(--color-border);
             border-radius: 6px;
-            background-color: white;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .activity-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .dates-count {
+            background: var(--color-selected);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
         .selected-dates {
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.5;
             white-space: pre-wrap;
-            padding: 10px;
+            padding: 12px;
             background-color: #f6f8fa;
             border-radius: 6px;
             overflow-y: auto;
@@ -158,15 +208,27 @@
             border: 1px solid var(--color-border);
         }
 
+        .no-dates {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+
         .controls {
             margin-top: 16px;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px;
+            background: #f6f8fa;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
         }
 
         .button {
-            display: inline-block;
-            padding: 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
             font-size: 14px;
             font-weight: 500;
             line-height: 20px;
@@ -177,6 +239,11 @@
             box-shadow: 0 1px 0 rgba(27, 31, 35, 0.1);
             cursor: pointer;
             text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .button i {
+            font-size: 14px;
         }
 
         .button.primary {
@@ -186,10 +253,15 @@
 
         .button:hover {
             background-color: #f3f4f6;
+            transform: translateY(-1px);
         }
 
         .button.primary:hover {
             background-color: #2c974b;
+        }
+
+        .button:active {
+            transform: translateY(0);
         }
     </style>
 </head>
@@ -209,8 +281,12 @@
             <div class="months"></div>
             <div class="days-labels">
                 <div class="day-label">Mon</div>
+                <div class="day-label">Tue</div>
                 <div class="day-label">Wed</div>
+                <div class="day-label">Thu</div>
                 <div class="day-label">Fri</div>
+                <div class="day-label">Sat</div>
+                <div class="day-label">Sun</div>
             </div>
             <div class="calendar-slider">
                 <div class="weeks"></div>
@@ -218,14 +294,25 @@
         </div>
 
         <div class="controls">
-            <button class="button" id="clear-selection">Clear Selection</button>
-            <button class="button primary" id="copy-dates">Copy Selected Dates</button>
+            <button class="button" id="clear-selection">
+                <i class="fas fa-eraser"></i>
+                Clear Selection
+            </button>
+            <button class="button primary" id="copy-dates">
+                <i class="fas fa-copy"></i>
+                Copy Selected Dates
+            </button>
         </div>
     </div>
 
     <div class="activity-info">
-        <h3>Selected Dates:</h3>
-        <div class="selected-dates" id="selected-dates">No dates selected</div>
+        <div class="activity-header">
+            <h3>Selected Dates</h3>
+            <span class="dates-count" id="dates-count">0 selected</span>
+        </div>
+        <div class="selected-dates" id="selected-dates">
+            <span class="no-dates">No dates selected</span>
+        </div>
     </div>
 
     <script>
@@ -234,17 +321,70 @@
         let calendarData = [];
         
         // Get current date
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth();
-        const currentDay = today.getDate();
+        let today = new Date();
+        let currentYear = today.getFullYear();
+        let currentMonth = today.getMonth();
+        let currentDay = today.getDate();
         
-        // Available years (2020 to current year)
+        // Available years (2020 to 2030)
         const startYear = 2020;
-        const endYear = currentYear;
+        const endYear = 2030;
         let selectedYear = currentYear; // Default to current year
         
-        // Update current date display
+        // Track last checked date for auto-update
+        let lastCheckedDate = {
+            year: today.getFullYear(),
+            month: today.getMonth(),
+            day: today.getDate()
+        };
+        
+        // Function to check if the date has changed
+        function hasDateChanged() {
+            const now = new Date();
+            const newYear = now.getFullYear();
+            const newMonth = now.getMonth();
+            const newDay = now.getDate();
+            
+            // Check if date components have changed
+            const yearChanged = newYear !== lastCheckedDate.year;
+            const monthChanged = newMonth !== lastCheckedDate.month;
+            const dayChanged = newDay !== lastCheckedDate.day;
+            
+            // Update the last checked date
+            lastCheckedDate = {
+                year: newYear,
+                month: newMonth,
+                day: newDay
+            };
+            
+            // Update global today variables
+            today = now;
+            currentYear = newYear;
+            currentMonth = newMonth;
+            currentDay = newDay;
+            
+            // Return true if any component changed
+            return yearChanged || monthChanged || dayChanged;
+        }
+        
+        // Function to handle date changes
+        function handleDateChange() {
+            if (hasDateChanged()) {
+                console.log("Date changed, updating calendar...");
+                
+                // If viewing current year, update the calendar
+                if (selectedYear === currentYear) {
+                    resetCalendar();
+                    renderMonths();
+                    renderCalendar();
+                    scrollToCurrentMonth();
+                }
+                
+                // Update the date display
+                updateCurrentDateDisplay();
+            }
+        }
+        
         function updateCurrentDateDisplay() {
             const now = new Date();
             const options = { 
@@ -260,15 +400,21 @@
                 `Current Date: ${now.toLocaleDateString('en-US', options)}`;
         }
         
-        // Update date display every second
+        // Start clock and date change detection
         function startClock() {
             updateCurrentDateDisplay();
-            setInterval(updateCurrentDateDisplay, 1000);
+            
+            // Check for date changes more frequently (every 10 seconds)
+            setInterval(() => {
+                updateCurrentDateDisplay();
+                handleDateChange();
+            }, 10000); // Every 10 seconds
         }
         
         // Populate year dropdown
         function populateYearDropdown() {
             const yearSelect = document.getElementById('year-select');
+            yearSelect.innerHTML = ''; // Clear existing options
             
             for (let year = startYear; year <= endYear; year++) {
                 const option = document.createElement('option');
@@ -284,7 +430,9 @@
             yearSelect.addEventListener('change', function() {
                 selectedYear = parseInt(this.value);
                 resetCalendar();
+                renderMonths();
                 renderCalendar();
+                scrollToCurrentMonth();
             });
         }
         
@@ -303,14 +451,11 @@
         // Function to generate calendar data for a specific year
         function generateCalendarData(year) {
             const startDate = new Date(year, 0, 1); // Jan 1 of selected year
+            const endDate = new Date(year, 11, 31); // Always set to Dec 31 of the year
             
-            // If selected year is current year, end at today, otherwise end at Dec 31
-            const endDate = new Date();
-            if (year < currentYear) {
-                endDate.setFullYear(year, 11, 31); // Dec 31 of selected year
-            } // else it remains today (for current year)
+            // For future years, we don't need to check against current date anymore
+            // This ensures we always get the full year calendar
             
-            // Calculate the number of weeks
             const daysDiff = Math.floor((endDate - startDate) / (24 * 60 * 60 * 1000));
             const totalWeeks = Math.ceil((daysDiff + getWeekday(startDate)) / 7);
             
@@ -363,17 +508,16 @@
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            return `'${year}-${month}-${day}'`;
+            return `${year}-${month}-${day}`;
         }
         
         // Function to render months for the current year
         function renderMonths() {
             const monthsContainer = document.querySelector('.months');
-            const startDate = new Date(selectedYear, 0, 1);
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             
-            // Determine end month
-            const endMonth = (selectedYear < currentYear) ? 11 : currentMonth;
+            // Always show all 12 months, regardless of the year
+            const endMonth = 11;
             
             for (let month = 0; month <= endMonth; month++) {
                 const monthElement = document.createElement('div');
@@ -386,10 +530,13 @@
         // Function to update selected dates display
         function updateSelectedDates(dates) {
             const selectedDatesElement = document.getElementById('selected-dates');
+            const datesCountElement = document.getElementById('dates-count');
             selectedDates = dates;
             
+            datesCountElement.textContent = `${selectedDates.length} selected`;
+            
             if (selectedDates.length === 0) {
-                selectedDatesElement.textContent = 'No dates selected';
+                selectedDatesElement.innerHTML = '<span class="no-dates">No dates selected</span>';
                 return;
             }
             
@@ -525,14 +672,52 @@
             }
         }
         
+        // Function to check for date changes and update calendar if needed
+        function checkForDateChange() {
+            const now = new Date();
+            const currentDateString = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+            const lastDateString = `${lastCheckedDate.year}-${lastCheckedDate.month}-${lastCheckedDate.day}`;
+            
+            if (currentDateString !== lastDateString) {
+                console.log("Date has changed from", lastDateString, "to", currentDateString);
+                
+                // Update last checked date
+                lastCheckedDate = {
+                    year: now.getFullYear(),
+                    month: now.getMonth(),
+                    day: now.getDate()
+                };
+                
+                // Update global today variables
+                today = now;
+                currentYear = now.getFullYear();
+                currentMonth = now.getMonth();
+                currentDay = now.getDate();
+                
+                // If viewing current year, rebuild the calendar to include the new day
+                if (selectedYear === currentYear) {
+                    resetCalendar();
+                    renderMonths();
+                    renderCalendar();
+                }
+                
+                // Update the date display
+                updateCurrentDateDisplay();
+            }
+        }
+        
         // Initialize the application
         function initialize() {
-            startClock();
+            updateCurrentDateDisplay();
             populateYearDropdown();
             renderMonths();
             renderCalendar();
             initializeEventListeners();
             scrollToCurrentMonth();
+            
+            // Set up automatic date change detection
+            // Check every minute for date changes
+            setInterval(checkForDateChange, 60000);
         }
         
         // Start the application
